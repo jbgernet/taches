@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f5f3ee">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tâches">
+<title>Mes tâches</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f3ee; --surface:#fff; --ink:#1d2125; --muted:#6b7177; --line:#e6e2d9;
+  --accent:#2f6f4f; --accent-soft:#e3efe8; --warn:#b5562f; --warn-soft:#f8e9e2;
+  --radius:12px; --shadow:0 1px 2px rgba(0,0,0,.04),0 4px 14px rgba(0,0,0,.04);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Inter,system-ui,-apple-system,Segoe UI,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.app{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+/* Sidebar */
+.nav{position:sticky;top:0;height:100vh;padding:22px 14px;border-right:1px solid var(--line);background:#efece5;display:flex;flex-direction:column;gap:2px}
+.brand{font-weight:700;font-size:17px;padding:4px 10px 18px;letter-spacing:-.01em}
+.brand small{display:block;font-weight:500;font-size:12.5px;color:var(--muted);margin-top:2px}
+.nav a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;color:var(--ink);text-decoration:none;font-weight:500}
+.nav a svg{width:18px;height:18px;flex:none;opacity:.75}
+.nav a:hover{background:rgba(0,0,0,.04)}
+.nav a.on{background:var(--surface);box-shadow:var(--shadow)}
+.nav a .count{margin-left:auto;font-size:12px;color:var(--muted);font-weight:600}
+.nav a .count.alert{color:var(--warn)}
+.nav .sep{height:1px;background:var(--line);margin:12px 6px}
+.nav .plist a{font-weight:400;font-size:14px;padding:6px 10px}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
+/* Main */
+main{padding:34px 40px 120px;max-width:860px;width:100%}
+.view-head{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.view-head h1{margin:0;font-size:27px;letter-spacing:-.02em;line-height:1.15}
+.view-head p{margin:4px 0 0;color:var(--muted);text-transform:none}
+.view-head .grow{flex:1}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:7px 12px;font-weight:500;font-size:14px}
+.btn:hover{border-color:#cfcabe}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.danger{color:var(--warn)}
+.btn.danger.solid{background:var(--warn);border-color:var(--warn);color:#fff}
+/* Add form */
+.add{display:flex;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:6px 6px 6px 14px;box-shadow:var(--shadow);margin-bottom:26px;flex-wrap:wrap}
+.add:focus-within{border-color:#bdb7a9}
+.add input[type=text]{flex:1 1 220px;border:0;outline:0;padding:8px 0;background:transparent;min-width:0}
+.add select,.add input[type=date]{border:1px solid var(--line);background:#faf9f6;border-radius:8px;padding:6px 8px;font-size:13.5px;max-width:170px}
+.add .btn{padding:7px 14px}
+/* Sections */
+.section{margin-bottom:26px}
+.section h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 8px;display:flex;align-items:center;gap:8px;font-weight:600}
+.section h2 .n{font-weight:500;opacity:.8}
+.section h2 .act{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:500;font-size:13px;border:0;background:none;color:var(--accent);padding:2px 4px}
+.section.warn h2{color:var(--warn)}
+.section.today h2.daytitle{color:var(--accent)}
+ul.tasks{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.empty{color:var(--muted);font-size:14px;padding:12px 14px;background:transparent;border:1px dashed var(--line);border-radius:var(--radius)}
+li.task{display:flex;align-items:flex-start;gap:12px;padding:11px 12px 11px 14px;border-top:1px solid var(--line)}
+li.task:first-child{border-top:0}
+li.task:hover{background:#fcfbf8}
+.check{width:21px;height:21px;border-radius:50%;border:2px solid #b9b4a8;background:#fff;flex:none;margin-top:1px;display:grid;place-items:center;padding:0;transition:.12s}
+.check:hover{border-color:var(--accent);background:var(--accent-soft)}
+.check svg{width:12px;height:12px;opacity:0;color:#fff}
+li.done .check{background:var(--accent);border-color:var(--accent)}
+li.done .check svg{opacity:1}
+.tbody{flex:1;min-width:0;cursor:pointer}
+.ttitle{word-wrap:break-word}
+li.done .ttitle{color:var(--muted);text-decoration:line-through;text-decoration-color:#b9b4a8}
+.meta{display:flex;flex-wrap:wrap;gap:6px 10px;margin-top:3px;font-size:12.5px;color:var(--muted)}
+.meta span{display:inline-flex;align-items:center;gap:5px}
+.meta .late{color:var(--warn);font-weight:500}
+.meta .note{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tact{display:flex;gap:4px;flex:none;align-items:center}
+.mini{border:1px solid var(--line);background:#faf9f6;border-radius:7px;padding:3px 8px;font-size:12.5px;font-weight:500;white-space:nowrap}
+.mini:hover{border-color:var(--accent);color:var(--accent)}
+.icon{border:0;background:none;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:var(--muted)}
+.icon:hover{background:rgba(0,0,0,.05);color:var(--ink)}
+.icon svg{width:17px;height:17px}
+/* Week */
+.day{margin-bottom:16px}
+.day h3{margin:0 0 6px;font-size:14.5px;font-weight:600;display:flex;align-items:center;gap:8px;text-transform:capitalize}
+.day h3 .sub{color:var(--muted);font-weight:400;font-size:13px;text-transform:none}
+.day.istoday h3{color:var(--accent)}
+.day.past{opacity:.6}
+.day h3 .plus{margin-left:auto;border:0;background:none;color:var(--muted);font-size:13px;padding:2px 6px;border-radius:6px;text-transform:none}
+.day h3 .plus:hover{color:var(--accent);background:var(--accent-soft)}
+.day .empty{padding:8px 14px;font-size:13px}
+/* Projects grid */
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);text-decoration:none;color:inherit;display:block;border-left:4px solid var(--c)}
+.pcard:hover{border-color:#cfcabe;border-left-color:var(--c)}
+.pcard b{display:block;font-size:15.5px;margin-bottom:6px}
+.pcard .stats{font-size:13px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+.pcard .stats .late{color:var(--warn)}
+details.donebox summary{cursor:pointer;font-size:13px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;list-style:none}
+details.donebox summary::-webkit-details-marker{display:none}
+details.donebox summary::before{content:"▸ ";}
+details.donebox[open] summary::before{content:"▾ ";}
+/* Sheet */
+.sheet{position:fixed;inset:0;background:rgba(20,22,24,.32);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.sheet[hidden]{display:none}
+.panel{background:var(--surface);border-radius:16px;width:100%;max-width:440px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.2);max-height:90vh;overflow:auto}
+.panel h3{margin:0 0 4px;font-size:18px}
+.panel .muted{color:var(--muted);margin:0 0 14px;font-size:14px;word-wrap:break-word}
+.ropts{display:grid;gap:6px}
+.ropts button,.ropts label{display:flex;justify-content:space-between;align-items:center;text-align:left;border:1px solid var(--line);background:#faf9f6;border-radius:10px;padding:10px 12px;font-weight:500}
+.ropts button:hover,.ropts label:hover{border-color:var(--accent);background:var(--accent-soft)}
+.ropts button span,.ropts label span{color:var(--muted);font-weight:400;font-size:13px}
+.ropts button.cur{border-color:var(--accent)}
+.ropts input[type=date]{border:1px solid var(--line);border-radius:7px;padding:4px 6px;background:#fff}
+.field{display:grid;gap:5px;margin-bottom:12px}
+.field label{font-size:13px;color:var(--muted);font-weight:500}
+.field input,.field select,.field textarea{border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:#faf9f6;width:100%}
+.field textarea{min-height:80px;resize:vertical}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row .grow{flex:1}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.swatches button{width:26px;height:26px;border-radius:50%;border:2px solid transparent;padding:0;outline:2px solid transparent}
+.swatches button.on{outline-color:var(--ink);border-color:#fff}
+/* Banner / toast */
+.banner{background:#fff6e0;border:1px solid #f0dca8;color:#7a5a10;border-radius:10px;padding:9px 12px;font-size:13.5px;margin-bottom:16px}
+.banner[hidden]{display:none}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#22262a;color:#fff;border-radius:10px;padding:10px 14px;font-size:14px;display:flex;gap:14px;align-items:center;z-index:60;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+.toast[hidden]{display:none}
+.toast button{background:none;border:0;color:#9fd8b8;font-weight:600;padding:0}
+.loading{color:var(--muted);padding:30px 0}
+.topbar{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin:-14px 0 6px}
+.sync{font-size:12.5px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.sync::before{content:"";width:7px;height:7px;border-radius:50%;background:#b9b4a8}
+.sync.ok::before{background:var(--accent)}
+.sync.wait::before,.sync.busy::before{background:#c08a1e}
+.sync.err{color:var(--warn)}
+.sync.err::before{background:var(--warn)}
+/* Mobile */
+@media (max-width:760px){
+  .app{grid-template-columns:1fr}
+  .nav{position:fixed;bottom:0;top:auto;left:0;right:0;height:auto;flex-direction:row;padding:6px 4px calc(6px + env(safe-area-inset-bottom));border-right:0;border-top:1px solid var(--line);z-index:40;justify-content:space-around;gap:0}
+  .brand,.nav .sep,.nav .plist{display:none}
+  .nav a{flex-direction:column;gap:2px;font-size:10.5px;padding:5px 2px;flex:1;text-align:center;position:relative}
+  .nav a.on{box-shadow:none;background:transparent;color:var(--accent)}
+  .nav a .count{position:absolute;top:0;right:calc(50% - 20px);margin:0;font-size:10px}
+  main{padding:20px 14px 110px}
+  .view-head h1{font-size:23px}
+  .add input[type=text]{flex-basis:100%}
+  .add{padding:6px}
+  .add input[type=text]{padding:8px 8px}
+  .add select,.add input[type=date]{max-width:none;flex:1 1 0;min-width:0}
+  .add .btn{flex:1 1 100%}
+  .sheet{align-items:flex-end;padding:0}
+  .panel{border-radius:16px 16px 0 0;max-width:none;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+  .toast{bottom:84px}
+  .mini.hide-sm{display:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="nav" id="nav"></nav>
+  <main>
+    <div class="topbar"><span class="sync" id="sync"></span><button class="icon gear" data-act="settings" title="Réglages" aria-label="Réglages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>
+    <div class="banner" id="banner" hidden></div>
+    <header class="view-head" id="head"></header>
+    <div id="addWrap"></div>
+    <div id="content"><div class="loading">Chargement…</div></div>
+  </main>
+</div>
+<div class="sheet" id="sheet" hidden><div class="panel" id="panel"></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ---------- Utilitaires ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const pad = n => String(n).padStart(2, "0");
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d); };
+const addDays = (d, n) => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate()+n); return x; };
+const mondayOf = d => addDays(d, -((d.getDay()+6)%7));
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const JOURS = ["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"];
+const JC = ["lun.","mar.","mer.","jeu.","ven.","sam.","dim."];
+const MOIS = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
+const MOISL = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+const wd = d => (d.getDay()+6)%7;
+const fmtDay = s => { const d = parse(s); return `${JOURS[wd(d)]} ${d.getDate()} ${MOIS[d.getMonth()]}`; };
+const fmtShort = s => { const d = parse(s); return `${JC[wd(d)]} ${d.getDate()}`; };
+const fmtWeek = s => { const d = parse(s), e = addDays(d, 6); return d.getMonth()===e.getMonth() ? `${d.getDate()} – ${e.getDate()} ${MOIS[e.getMonth()]}` : `${d.getDate()} ${MOIS[d.getMonth()]} – ${e.getDate()} ${MOIS[e.getMonth()]}`; };
+const COLORS = ["#2f6f4f","#3b6fb6","#b5562f","#8a4fb0","#c08a1e","#2a8c8c","#b33f62","#5b6470"];
+
+function ctx(){
+  const now = new Date(), mon = mondayOf(now);
+  return { T: iso(now), TM: iso(addDays(now,1)), W: iso(mon), NW: iso(addDays(mon,7)), NNW: iso(addDays(mon,14)) };
+}
+const weekOf = t => t.day ? iso(mondayOf(parse(t.day))) : (t.week || null);
+const isOverdue = (t, c) => !t.done && ((t.day && t.day < c.T) || (!t.day && t.week && t.week < c.W));
+
+function schedLabel(t, c){
+  if (t.day){
+    if (t.day === c.T) return "Aujourd'hui";
+    if (t.day === c.TM) return "Demain";
+    if (t.day === iso(addDays(parse(c.T), -1))) return "Hier";
+    return cap(fmtDay(t.day));
+  }
+  if (t.week){
+    if (t.week === c.W) return "Cette semaine";
+    if (t.week === c.NW) return "Semaine prochaine";
+    return "Semaine du " + fmtWeek(t.week);
+  }
+  return "Sans date";
+}
+
+const ICON = {
+  today:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  week:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>',
+  next:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  inbox:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/></svg>',
+  folder:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
+  done:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>',
+  cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M12 13v4M10 15h4"/></svg>',
+  more:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
+};
+
+/* ---------- État & stockage (fichier JSON dans un repo GitHub privé) ---------- */
+const S = { tasks: new Map(), projects: new Map(), ready: false, mode: null };
+const LKEY = "taches-cache-v1", CFG_KEY = "taches-github-config";
+let tomb = {};            // id supprimé -> horodatage (pour synchroniser les suppressions)
+let ghSha = null;         // version du fichier connue côté GitHub
+let pending = false;      // modifications locales pas encore envoyées
+let saveTimer = null, saving = false, again = false;
+let gh = null;
+try { gh = JSON.parse(localStorage.getItem(CFG_KEY) || "null"); } catch(e){}
+
+function saveLocal(){
+  try { localStorage.setItem(LKEY, JSON.stringify({ tasks:[...S.tasks.values()], projects:[...S.projects.values()], deleted: tomb, sha: ghSha, pending })); } catch(e){}
+}
+function loadLocal(){
+  try {
+    const raw = JSON.parse(localStorage.getItem(LKEY) || "null");
+    if (!raw) return;
+    S.tasks = new Map((raw.tasks||[]).map(t => [t.id, t]));
+    S.projects = new Map((raw.projects||[]).map(p => [p.id, p]));
+    tomb = raw.deleted || {}; ghSha = raw.sha || null; pending = !!raw.pending;
+  } catch(e){}
+}
+function touched(){ pending = true; saveLocal(); render(); scheduleSave(); }
+function putTask(t){ S.tasks.set(t.id, { ...t, updatedAt: Date.now() }); touched(); }
+function delTask(id){ S.tasks.delete(id); tomb[id] = Date.now(); touched(); }
+function putProject(p){ S.projects.set(p.id, { ...p, updatedAt: Date.now() }); touched(); }
+function delProject(id){
+  S.projects.delete(id); tomb[id] = Date.now();
+  const now = Date.now();
+  for (const t of S.tasks.values()) if (t.projectId === id) S.tasks.set(t.id, { ...t, projectId: null, updatedAt: now });
+  touched();
+}
+
+/* --- API GitHub --- */
+const b64enc = str => { const b = new TextEncoder().encode(str); let s = ""; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(s); };
+const b64dec = b64 => new TextDecoder().decode(Uint8Array.from(atob(b64.replace(/\s/g, "")), c => c.charCodeAt(0)));
+function ghUrl(cfg){ return `https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}/contents/${cfg.path.split("/").map(encodeURIComponent).join("/")}`; }
+function ghHeaders(cfg){ return { "Authorization": "Bearer " + cfg.token, "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" }; }
+async function ghGet(cfg){
+  const r = await fetch(ghUrl(cfg), { headers: ghHeaders(cfg), cache: "no-store" });
+  if (r.status === 404) return { exists: false };
+  if (!r.ok) throw ghError(r.status);
+  const j = await r.json();
+  return { exists: true, sha: j.sha, data: JSON.parse(b64dec(j.content || "") || "{}") };
+}
+function ghError(status){
+  const m = { 401: "jeton GitHub invalide ou expiré", 403: "accès refusé (droits du jeton ?)", 404: "repo introuvable (nom ou droits du jeton ?)" }[status];
+  const e = new Error(m || "erreur GitHub " + status); e.status = status; return e;
+}
+
+function mergeRemote(data){
+  const rt = data.deleted || {};
+  for (const [id, ts] of Object.entries(rt)) tomb[id] = Math.max(tomb[id] || 0, ts);
+  const merge = (map, items) => {
+    for (const it of items || []){
+      const loc = map.get(it.id);
+      if (!loc || (it.updatedAt || 0) > (loc.updatedAt || 0)) map.set(it.id, it);
+    }
+    for (const [id, it] of map) if (tomb[id] && tomb[id] >= (it.updatedAt || 0)) map.delete(id);
+  };
+  merge(S.tasks, data.tasks); merge(S.projects, data.projects);
+  // Nettoie les traces de suppression de plus de 90 jours
+  const lim = Date.now() - 90 * 864e5;
+  for (const [id, ts] of Object.entries(tomb)) if (ts < lim) delete tomb[id];
+}
+function serialize(){
+  return JSON.stringify({ app: "taches", version: 1, savedAt: new Date().toISOString(), tasks: [...S.tasks.values()], projects: [...S.projects.values()], deleted: tomb }, null, 1);
+}
+
+async function pull(){
+  if (S.mode !== "gh" || saving) return;
+  setSync("sync");
+  try {
+    const r = await ghGet(gh);
+    if (r.exists){ ghSha = r.sha; mergeRemote(r.data); }
+    else ghSha = null;
+    S.ready = true; saveLocal(); render();
+    if (pending || !r.exists) await push(); else setSync("ok");
+  } catch(e){ S.ready = true; render(); setSync("err", e.message); }
+}
+function scheduleSave(){
+  if (S.mode !== "gh") return;
+  setSync("wait");
+  clearTimeout(saveTimer); saveTimer = setTimeout(push, 1200);
+}
+async function push(){
+  if (S.mode !== "gh") return;
+  if (saving){ again = true; return; }
+  saving = true; again = false; setSync("sync");
+  try {
+    for (let attempt = 0; attempt < 4; attempt++){
+      const body = { message: "Mise à jour des tâches", content: b64enc(serialize()) };
+      if (ghSha) body.sha = ghSha;
+      const r = await fetch(ghUrl(gh), { method: "PUT", headers: { ...ghHeaders(gh), "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (r.ok){ ghSha = (await r.json()).content.sha; pending = false; saveLocal(); setSync("ok"); break; }
+      if (r.status === 409 || r.status === 422){
+        // Le fichier a changé ailleurs (autre appareil) : on récupère, on fusionne, on réessaie
+        const g = await ghGet(gh);
+        if (g.exists){ ghSha = g.sha; mergeRemote(g.data); render(); } else ghSha = null;
+        continue;
+      }
+      throw ghError(r.status);
+    }
+    if (pending) setSync("err", "conflit d'enregistrement répété");
+  } catch(e){ setSync("err", e.message); }
+  saving = false; saveLocal();
+  if (again || (pending && !document.hidden && syncState !== "err")) scheduleSave();
+}
+
+let syncState = "", syncMsg = "";
+function setSync(state, msg){
+  syncState = state; syncMsg = msg || "";
+  const el = $("#sync"); if (!el) return;
+  const txt = { ok: "Synchronisé", wait: "Modifié…", sync: "Synchronisation…", err: "Non synchronisé", local: "Ce navigateur seulement" }[state] || "";
+  el.className = "sync " + (state === "sync" ? "busy" : state);
+  el.textContent = txt;
+  el.title = msg || "";
+  if (state === "err") banner("Synchronisation GitHub impossible : " + msg + ". Tes modifications sont gardées sur cet appareil et seront envoyées dès que possible.");
+  else if (state === "ok") banner(null);
+}
+
+function init(){
+  loadLocal();
+  if (gh && gh.token){
+    S.mode = "gh"; S.ready = S.tasks.size > 0 || S.projects.size > 0;
+    render(); setSync("sync"); pull();
+  } else {
+    S.mode = "local"; S.ready = true; render(); setSync("local");
+    banner("Les tâches sont gardées dans ce navigateur uniquement. Connecte ton repo GitHub dans ⚙ Réglages pour les synchroniser entre tes appareils.");
+  }
+}
+setInterval(() => { if (!document.hidden && !pending) pull(); }, 120000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden && S.mode === "gh" && !pending) pull(); });
+
+/* --- Réglages --- */
+function settingsSheet(){
+  const c = gh || { owner: "jbgernet", repo: "taches-donnees", path: "taches.json", token: "" };
+  openSheet(`<h3>Réglages</h3><p class="muted">Les tâches sont enregistrées dans un fichier de ton repo GitHub <b>privé</b>. Le jeton reste uniquement dans ce navigateur : à saisir une fois par appareil.</p>
+    <div class="row" style="gap:10px;align-items:flex-start">
+      <div class="field grow"><label for="sOwner">Compte GitHub</label><input id="sOwner" value="${esc(c.owner)}" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+      <div class="field grow"><label for="sRepo">Repo des données (privé)</label><input id="sRepo" value="${esc(c.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+    </div>
+    <div class="field"><label for="sPath">Fichier</label><input id="sPath" value="${esc(c.path)}" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+    <div class="field"><label for="sToken">Jeton d'accès GitHub (fine-grained, « Contents : Read and write » sur ce repo uniquement)</label><input id="sToken" type="password" value="${esc(c.token)}" placeholder="github_pat_…" autocomplete="off"></div>
+    <p class="muted" id="sMsg" style="min-height:1.2em"></p>
+    <div class="row">${gh ? `<button class="btn danger" data-x="forget">Déconnecter cet appareil</button>` : ""}<span class="grow"></span><button class="btn" data-x="close">Annuler</button><button class="btn primary" data-x="save">Tester et enregistrer</button></div>`);
+  $("#panel").onclick = async e => {
+    const x = e.target.closest("[data-x]"); if (!x) return;
+    const a = x.dataset.x;
+    if (a === "close") closeSheet();
+    else if (a === "forget"){
+      try { localStorage.removeItem(CFG_KEY); } catch(_){}
+      gh = null; S.mode = "local"; closeSheet(); setSync("local"); render();
+      toast("Appareil déconnecté de GitHub");
+    }
+    else if (a === "save"){
+      const cfg = { owner: $("#sOwner").value.trim(), repo: $("#sRepo").value.trim(), path: $("#sPath").value.trim() || "taches.json", token: $("#sToken").value.trim() };
+      if (!cfg.owner || !cfg.repo || !cfg.token){ $("#sMsg").textContent = "Remplis le compte, le repo et le jeton."; return; }
+      $("#sMsg").textContent = "Test de la connexion…"; x.disabled = true;
+      try {
+        const rr = await fetch(`https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}`, { headers: ghHeaders(cfg), cache: "no-store" });
+        if (!rr.ok) throw ghError(rr.status);
+        const info = await rr.json();
+        if (!info.private && !x.dataset.okpublic){
+          $("#sMsg").innerHTML = "⚠ Ce repo est <b>public</b> : tes tâches seraient lisibles par tout le monde. Rends-le privé, ou clique à nouveau pour continuer quand même.";
+          x.dataset.okpublic = "1"; x.disabled = false; return;
+        }
+        await ghGet(cfg);
+        try { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); } catch(_){}
+        gh = cfg; S.mode = "gh"; closeSheet();
+        pending = pending || S.tasks.size > 0 || S.projects.size > 0;
+        toast("Connecté à " + cfg.owner + "/" + cfg.repo);
+        pull();
+      } catch(err){ $("#sMsg").textContent = "Échec : " + err.message + "."; x.disabled = false; }
+    }
+  };
+}
+
+/* ---------- Requêtes ---------- */
+const tasks = () => [...S.tasks.values()];
+const projects = () => [...S.projects.values()].sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
+function sortTasks(list){
+  return list.sort((a,b) => {
+    const ka = a.day || a.week || "9999", kb = b.day || b.week || "9999";
+    if (ka !== kb) return ka < kb ? -1 : 1;
+    return (a.createdAt||0) - (b.createdAt||0);
+  });
+}
+
+/* ---------- Actions ---------- */
+function addTask(title, projectId, when, date){
+  const c = ctx();
+  const t = { id: uid("t"), title: title.trim(), note: "", projectId: projectId || null, day: null, week: null, done: false, doneAt: null, createdAt: Date.now(), resched: 0 };
+  applyWhen(t, when, date, c);
+  putTask(t);
+}
+function applyWhen(t, when, date, c){
+  t.day = null; t.week = null;
+  if (when === "today") t.day = c.T;
+  else if (when === "tomorrow") t.day = c.TM;
+  else if (when === "thisweek") t.week = c.W;
+  else if (when === "nextweek") t.week = c.NW;
+  else if (when === "nextmonday") t.day = c.NW;
+  else if (when === "date" && date) t.day = date;
+}
+function reschedule(id, when, date){
+  const old = S.tasks.get(id); if (!old) return;
+  const c = ctx();
+  const t = { ...old };
+  applyWhen(t, when, date, c);
+  if (t.day === old.day && t.week === old.week && !old.done) return;
+  if (old.day || old.week) t.resched = (old.resched || 0) + 1;
+  t.done = false; t.doneAt = null;
+  putTask(t);
+  toast("Replanifiée : " + schedLabel(t, c), () => putTask(old));
+}
+function toggle(id){
+  const old = S.tasks.get(id); if (!old) return;
+  const t = { ...old, done: !old.done, doneAt: old.done ? null : ctx().T };
+  putTask(t);
+  if (t.done) toast("Fait ✓", () => putTask(old));
+}
+
+/* ---------- Rendu : composants ---------- */
+function taskRow(t, o = {}){
+  const c = ctx(), p = t.projectId ? S.projects.get(t.projectId) : null;
+  const meta = [];
+  if (p && !o.hideProject) meta.push(`<span><i class="dot" style="background:${esc(p.color)}"></i>${esc(p.name)}</span>`);
+  if (!o.hideSched || isOverdue(t, c)){
+    const late = isOverdue(t, c);
+    meta.push(`<span class="${late ? "late" : ""}">${esc(schedLabel(t, c))}${late ? " · en retard" : ""}</span>`);
+  }
+  if (t.resched >= 2 && !t.done) meta.push(`<span title="Nombre de reports">↻ reportée ${t.resched}×</span>`);
+  if (t.note) meta.push(`<span class="note">✎ ${esc(t.note.split("\n")[0])}</span>`);
+  const quick = (!t.done && o.quick) ? `<button class="mini ${o.quickHide ? "hide-sm" : ""}" data-act="quick" data-when="${o.quick}">${o.quickLabel}</button>` : "";
+  return `<li class="task ${t.done ? "done" : ""}" data-id="${esc(t.id)}">
+    <button class="check" data-act="toggle" aria-label="${t.done ? "Marquer à faire" : "Marquer comme fait"}">${ICON.check}</button>
+    <div class="tbody" data-act="edit"><div class="ttitle">${esc(t.title)}</div>${meta.length ? `<div class="meta">${meta.join("")}</div>` : ""}</div>
+    <div class="tact">${quick}<button class="icon" data-act="resched" title="Replanifier" aria-label="Replanifier">${ICON.cal}</button></div>
+  </li>`;
+}
+function list(items, o = {}){
+  if (!items.length) return o.empty ? `<div class="empty">${o.empty}</div>` : "";
+  return `<ul class="tasks">${items.map(t => taskRow(t, o)).join("")}</ul>`;
+}
+function section(title, items, o = {}){
+  if (!items.length && !o.empty) return "";
+  const act = o.action ? `<button class="act" data-act="${o.action.act}">${o.action.label}</button>` : "";
+  return `<section class="section ${o.cls || ""}"><h2>${title} <span class="n">${items.length || ""}</span>${act}</h2>${list(items, o)}</section>`;
+}
+
+/* ---------- Vues ---------- */
+const VIEWS = {
+  aujourdhui: { title: "Aujourd'hui", icon: ICON.today, when: "today" },
+  semaine: { title: "Cette semaine", icon: ICON.week, when: "thisweek" },
+  "semaine-prochaine": { title: "Semaine prochaine", short: "S+1", icon: ICON.next, when: "nextweek" },
+  "a-planifier": { title: "À planifier", icon: ICON.inbox, when: "none" },
+  projets: { title: "Projets", icon: ICON.folder },
+  fait: { title: "Fait", icon: ICON.done },
+};
+function route(){
+  const h = (location.hash || "").slice(1);
+  if (VIEWS[h]) return { view: h };
+  if (h.startsWith("projet-")){ const id = h.slice(7); if (S.projects.has(id) || !S.ready) return { view: "projet", id }; }
+  return { view: "aujourdhui" };
+}
+
+function renderNav(r){
+  const c = ctx(), all = tasks(), open = all.filter(t => !t.done);
+  const n = {
+    aujourdhui: open.filter(t => t.day === c.T).length,
+    late: open.filter(t => isOverdue(t, c)).length,
+    semaine: open.filter(t => weekOf(t) === c.W).length,
+    "semaine-prochaine": open.filter(t => weekOf(t) === c.NW).length,
+    "a-planifier": open.filter(t => !t.day && !t.week).length,
+  };
+  const now = new Date();
+  let h = `<div class="brand">Mes tâches<small>${cap(JOURS[wd(now)])} ${now.getDate()} ${MOISL[now.getMonth()]}</small></div>`;
+  for (const [k, v] of Object.entries(VIEWS)){
+    let cnt = "";
+    if (k === "aujourdhui"){ const tot = n.aujourdhui + n.late; cnt = tot ? `<span class="count ${n.late ? "alert" : ""}">${tot}</span>` : ""; }
+    else if (n[k]) cnt = `<span class="count">${n[k]}</span>`;
+    const label = window.innerWidth <= 760 && v.short ? v.short : v.title;
+    h += `<a href="#${k}" class="${r.view === k || (k === "projets" && r.view === "projet") ? "on" : ""}">${v.icon}<span>${label}</span>${cnt}</a>`;
+    if (k === "a-planifier") h += `<div class="sep"></div>`;
+  }
+  const ps = projects();
+  if (ps.length){
+    h += `<div class="plist">` + ps.map(p => {
+      const k = open.filter(t => t.projectId === p.id).length;
+      return `<a href="#projet-${esc(p.id)}" class="${r.view === "projet" && r.id === p.id ? "on" : ""}"><i class="dot" style="background:${esc(p.color)}"></i><span>${esc(p.name)}</span>${k ? `<span class="count">${k}</span>` : ""}</a>`;
+    }).join("") + `</div>`;
+  }
+  $("#nav").innerHTML = h;
+}
+
+let formState = null; // mémorise la saisie en cours entre deux rendus
+function renderAdd(r){
+  const wrap = $("#addWrap");
+  if (r.view === "fait"){ wrap.innerHTML = ""; return; }
+  if (r.view === "projets"){
+    wrap.innerHTML = `<form class="add" id="addProj"><input type="text" id="pName" placeholder="Nouveau projet…" autocomplete="off"><button class="btn primary">Créer</button></form>`;
+    return;
+  }
+  const key = r.view + (r.id || "");
+  const def = r.view === "projet" ? "none" : VIEWS[r.view].when;
+  const st = formState && formState.key === key ? formState : { key, text: "", when: def, date: "", project: r.view === "projet" ? r.id : "" };
+  formState = st;
+  const c = ctx();
+  const opts = [["today","Aujourd'hui"],["tomorrow","Demain"],["thisweek","Cette semaine"],["nextweek","Semaine prochaine"],["nextmonday","Lundi prochain"],["date","Date précise…"],["none","Sans date"]];
+  wrap.innerHTML = `<form class="add" id="addTask">
+    <input type="text" id="tTitle" placeholder="Ajouter une tâche…" autocomplete="off" value="${esc(st.text)}">
+    <select id="tProj" aria-label="Projet"><option value="">Sans projet</option>${projects().map(p => `<option value="${esc(p.id)}" ${st.project === p.id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select>
+    <select id="tWhen" aria-label="Quand">${opts.map(([v,l]) => `<option value="${v}" ${st.when === v ? "selected" : ""}>${l}</option>`).join("")}</select>
+    <input type="date" id="tDate" value="${esc(st.date || c.T)}" ${st.when === "date" ? "" : "hidden"} aria-label="Date">
+    <button class="btn primary">Ajouter</button>
+  </form>`;
+}
+
+function renderHead(r){
+  const c = ctx(); let h = "";
+  if (r.view === "aujourdhui"){
+    const d = new Date();
+    h = `<div><h1>Aujourd'hui</h1><p>${cap(JOURS[wd(d)])} ${d.getDate()} ${MOISL[d.getMonth()]}</p></div>`;
+  } else if (r.view === "semaine"){
+    h = `<div><h1>Cette semaine</h1><p>${fmtWeek(c.W)}</p></div>`;
+  } else if (r.view === "semaine-prochaine"){
+    h = `<div><h1>Semaine prochaine</h1><p>${fmtWeek(c.NW)} · ce que tu dois caser ou planifier</p></div>`;
+  } else if (r.view === "a-planifier"){
+    h = `<div><h1>À planifier</h1><p>Tâches sans date, et celles prévues plus tard</p></div>`;
+  } else if (r.view === "projets"){
+    h = `<div><h1>Projets</h1><p>Regroupe tes tâches par projet</p></div>`;
+  } else if (r.view === "fait"){
+    h = `<div><h1>Fait</h1><p>Les 30 derniers jours</p></div>`;
+  } else if (r.view === "projet"){
+    const p = S.projects.get(r.id);
+    h = p ? `<div class="grow"><h1><i class="dot" style="background:${esc(p.color)};width:13px;height:13px;vertical-align:middle;margin-right:8px"></i>${esc(p.name)}</h1><p>Projet</p></div><button class="btn" data-act="editproj">Modifier</button>` : `<div><h1>Projet</h1></div>`;
+  }
+  $("#head").innerHTML = h;
+}
+
+function weekBlock(start, all, c, o = {}){
+  let h = "";
+  for (let i = 0; i < 7; i++){
+    const d = iso(addDays(parse(start), i));
+    const items = sortTasks(all.filter(t => t.day === d)).sort((a,b) => a.done - b.done);
+    const past = d < c.T, isT = d === c.T;
+    if (o.skipEmpty && !items.length && i >= 5) continue;
+    h += `<div class="day ${isT ? "istoday" : ""} ${past && !items.some(t=>!t.done) ? "past" : ""}">
+      <h3>${JOURS[i]} <span class="sub">${parse(d).getDate()} ${MOIS[parse(d).getMonth()]}${isT ? " · aujourd'hui" : ""}</span>
+      ${past ? "" : `<button class="plus" data-act="addon" data-day="${d}">+ ajouter</button>`}</h3>
+      ${list(items, { hideSched: true, empty: "—" })}
+    </div>`;
+  }
+  return h;
+}
+
+function renderContent(r){
+  const el = $("#content");
+  if (!S.ready){ el.innerHTML = `<div class="loading">Chargement…</div>`; return; }
+  const c = ctx(), all = tasks(), open = all.filter(t => !t.done);
+  let h = "";
+
+  if (r.view === "aujourdhui"){
+    const late = sortTasks(open.filter(t => isOverdue(t, c)));
+    const today = sortTasks(open.filter(t => t.day === c.T));
+    const floating = sortTasks(open.filter(t => !t.day && t.week === c.W));
+    const doneToday = all.filter(t => t.done && t.doneAt === c.T);
+    h += section("En retard", late, { cls: "warn", quick: "today", quickLabel: "→ Aujourd'hui", action: late.length > 1 ? { act: "alltoday", label: "Tout mettre à aujourd'hui" } : null });
+    h += section("À faire aujourd'hui", today, { hideSched: true, empty: "Rien de prévu pour aujourd'hui. Ajoute une tâche ci-dessus, ou pioche dans « À caser cette semaine »." });
+    h += section("À caser cette semaine", floating, { hideSched: true, quick: "today", quickLabel: "→ Aujourd'hui" });
+    if (doneToday.length) h += `<details class="donebox section" open><summary>Fait aujourd'hui · ${doneToday.length}</summary>${list(doneToday, { hideSched: true })}</details>`;
+  }
+
+  else if (r.view === "semaine" || r.view === "semaine-prochaine"){
+    const W = r.view === "semaine" ? c.W : c.NW;
+    const floating = sortTasks(all.filter(t => !t.day && t.week === W)).sort((a,b) => a.done - b.done);
+    h += section(r.view === "semaine" ? "Dans la semaine, sans jour précis" : "À planifier la semaine prochaine", floating, {
+      hideSched: true, quick: r.view === "semaine" ? "today" : "nextmonday", quickLabel: r.view === "semaine" ? "→ Aujourd'hui" : "→ Lundi", quickHide: r.view !== "semaine",
+      empty: r.view === "semaine-prochaine" ? "Note ici ce que tu dois faire ou planifier la semaine prochaine, sans fixer de jour." : "Rien sans jour précis cette semaine."
+    });
+    h += `<section class="section"><h2>Jour par jour</h2>${weekBlock(W, all, c, { skipEmpty: true })}</section>`;
+  }
+
+  else if (r.view === "a-planifier"){
+    const none = sortTasks(open.filter(t => !t.day && !t.week));
+    const later = sortTasks(open.filter(t => { const w = weekOf(t); return w && w >= c.NNW; }));
+    h += section("Sans date", none, { hideSched: true, quick: "nextweek", quickLabel: "→ S+1", quickHide: true, empty: "Aucune tâche en attente de date." });
+    h += section("Plus tard", later, {});
+  }
+
+  else if (r.view === "projets"){
+    const ps = projects();
+    if (!ps.length) h += `<div class="empty">Aucun projet pour l'instant. Crée-en un ci-dessus, puis rattache-lui des tâches.</div>`;
+    else h += `<div class="pgrid">` + ps.map(p => {
+      const pt = open.filter(t => t.projectId === p.id);
+      const late = pt.filter(t => isOverdue(t, c)).length;
+      const wk = pt.filter(t => weekOf(t) === c.W).length;
+      const doneN = all.filter(t => t.projectId === p.id && t.done).length;
+      return `<a class="pcard" href="#projet-${esc(p.id)}" style="--c:${esc(p.color)}"><b>${esc(p.name)}</b><div class="stats"><span>${pt.length} à faire</span>${wk ? `<span>${wk} cette semaine</span>` : ""}${late ? `<span class="late">${late} en retard</span>` : ""}${doneN ? `<span>${doneN} faites</span>` : ""}</div></a>`;
+    }).join("") + `</div>`;
+  }
+
+  else if (r.view === "projet"){
+    const p = S.projects.get(r.id);
+    if (!p){ h = `<div class="empty">Ce projet n'existe plus. <a href="#projets">Voir les projets</a></div>`; }
+    else {
+      const pt = all.filter(t => t.projectId === p.id), po = pt.filter(t => !t.done);
+      const o = { hideProject: true };
+      h += section("En retard", sortTasks(po.filter(t => isOverdue(t, c))), { ...o, cls: "warn", quick: "today", quickLabel: "→ Aujourd'hui" });
+      h += section("Cette semaine", sortTasks(po.filter(t => !isOverdue(t, c) && weekOf(t) === c.W)), o);
+      h += section("Semaine prochaine", sortTasks(po.filter(t => weekOf(t) === c.NW)), o);
+      h += section("Plus tard", sortTasks(po.filter(t => { const w = weekOf(t); return w && w >= c.NNW; })), o);
+      h += section("Sans date", sortTasks(po.filter(t => !t.day && !t.week)), { ...o, hideSched: true });
+      if (!po.length) h += `<div class="empty section">Aucune tâche ouverte dans ce projet.</div>`;
+      const dn = pt.filter(t => t.done).sort((a,b) => (b.doneAt||"").localeCompare(a.doneAt||""));
+      if (dn.length) h += `<details class="donebox section"><summary>Faites · ${dn.length}</summary>${list(dn, o)}</details>`;
+    }
+  }
+
+  else if (r.view === "fait"){
+    const lim = iso(addDays(parse(c.T), -30));
+    const dn = all.filter(t => t.done && (t.doneAt || "") >= lim).sort((a,b) => (b.doneAt||"").localeCompare(a.doneAt||"") || (b.createdAt||0)-(a.createdAt||0));
+    if (!dn.length) h = `<div class="empty">Rien de coché ces 30 derniers jours.</div>`;
+    const groups = {};
+    dn.forEach(t => (groups[t.doneAt] = groups[t.doneAt] || []).push(t));
+    for (const [d, items] of Object.entries(groups)){
+      h += `<section class="section"><h2>${d === c.T ? "Aujourd'hui" : cap(fmtDay(d))} <span class="n">${items.length}</span></h2>${list(items, { hideSched: true })}</section>`;
+    }
+    const old = all.filter(t => t.done && (t.doneAt || "") < lim);
+    if (old.length) h += `<button class="btn danger" data-act="purge">Supprimer ${old.length} tâche${old.length > 1 ? "s" : ""} faite${old.length > 1 ? "s" : ""} il y a plus de 30 jours</button>`;
+  }
+  el.innerHTML = h;
+}
+
+function render(){
+  const r = route();
+  renderNav(r);
+  const active = document.activeElement && document.activeElement.id;
+  renderHead(r); renderAdd(r); renderContent(r);
+  if (active === "tTitle" && $("#tTitle")){ const i = $("#tTitle"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
+}
+
+/* ---------- Feuilles (dialogues) ---------- */
+function openSheet(html){ $("#panel").innerHTML = html; $("#sheet").hidden = false; }
+function closeSheet(){ $("#sheet").hidden = true; $("#panel").innerHTML = ""; }
+$("#sheet").addEventListener("click", e => { if (e.target.id === "sheet") closeSheet(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#sheet").hidden) closeSheet(); });
+
+function reschedSheet(id){
+  const t = S.tasks.get(id); if (!t) return;
+  const c = ctx();
+  const cur = t.day === c.T ? "today" : t.day === c.TM ? "tomorrow" : (!t.day && t.week === c.W) ? "thisweek" : (!t.day && t.week === c.NW) ? "nextweek" : t.day === c.NW ? "nextmonday" : (!t.day && !t.week) ? "none" : "";
+  const b = (k, l, s) => `<button data-r="${k}" class="${cur === k ? "cur" : ""}">${l}<span>${s}</span></button>`;
+  openSheet(`<h3>Replanifier</h3><p class="muted">${esc(t.title)} · actuellement : ${esc(schedLabel(t, c))}</p>
+    <div class="ropts">
+      ${b("today","Aujourd'hui", fmtShort(c.T))}
+      ${b("tomorrow","Demain", fmtShort(c.TM))}
+      ${b("thisweek","Cette semaine", "sans jour précis")}
+      ${b("nextweek","Semaine prochaine", "sans jour précis")}
+      ${b("nextmonday","Lundi prochain", fmtShort(c.NW))}
+      <label>Date précise <input type="date" id="rDate" value="${esc(t.day || c.T)}"></label>
+      ${b("none","Sans date", "à planifier")}
+    </div>
+    <div class="row" style="margin-top:14px"><span class="grow"></span><button class="btn" data-x="close">Annuler</button></div>`);
+  $("#panel").onclick = e => {
+    const k = e.target.closest("[data-r]");
+    if (k){ closeSheet(); reschedule(id, k.dataset.r); return; }
+    if (e.target.closest("[data-x=close]")) closeSheet();
+  };
+  $("#rDate").onchange = e => { if (e.target.value){ closeSheet(); reschedule(id, "date", e.target.value); } };
+}
+
+function editSheet(id){
+  const t = S.tasks.get(id); if (!t) return;
+  const c = ctx();
+  openSheet(`<h3>Modifier la tâche</h3><p class="muted">${esc(schedLabel(t, c))}${t.resched ? ` · reportée ${t.resched}×` : ""}</p>
+    <div class="field"><label for="eTitle">Intitulé</label><input id="eTitle" value="${esc(t.title)}"></div>
+    <div class="field"><label for="eProj">Projet</label><select id="eProj"><option value="">Sans projet</option>${projects().map(p => `<option value="${esc(p.id)}" ${t.projectId === p.id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select></div>
+    <div class="field"><label for="eNote">Note</label><textarea id="eNote" placeholder="Détails, lien, contact…">${esc(t.note || "")}</textarea></div>
+    <div class="row"><button class="btn danger" data-x="del">Supprimer</button><button class="btn" data-x="resched">Replanifier</button><span class="grow"></span><button class="btn" data-x="close">Annuler</button><button class="btn primary" data-x="save">Enregistrer</button></div>`);
+  const save = () => {
+    const title = $("#eTitle").value.trim(); if (!title) return $("#eTitle").focus();
+    const n = { ...S.tasks.get(id), title, projectId: $("#eProj").value || null, note: $("#eNote").value.trim() };
+    closeSheet(); putTask(n);
+  };
+  $("#eTitle").onkeydown = e => { if (e.key === "Enter") save(); };
+  $("#panel").onclick = e => {
+    const x = e.target.closest("[data-x]"); if (!x) return;
+    const a = x.dataset.x;
+    if (a === "close") closeSheet();
+    else if (a === "save") save();
+    else if (a === "resched") reschedSheet(id);
+    else if (a === "del"){
+      if (x.dataset.armed){ closeSheet(); const old = S.tasks.get(id); delTask(id); toast("Tâche supprimée", () => putTask(old)); }
+      else { x.dataset.armed = "1"; x.textContent = "Confirmer la suppression"; x.classList.add("solid"); }
+    }
+  };
+}
+
+function projSheet(id){
+  const p = S.projects.get(id); if (!p) return;
+  let color = p.color;
+  const n = tasks().filter(t => t.projectId === id).length;
+  openSheet(`<h3>Modifier le projet</h3><p class="muted">${n} tâche${n > 1 ? "s" : ""} rattachée${n > 1 ? "s" : ""}</p>
+    <div class="field"><label for="pn">Nom</label><input id="pn" value="${esc(p.name)}"></div>
+    <div class="field"><label>Couleur</label><div class="swatches">${COLORS.map(col => `<button data-col="${col}" class="${col === color ? "on" : ""}" style="background:${col}" aria-label="Couleur"></button>`).join("")}</div></div>
+    <div class="row"><button class="btn danger" data-x="del">Supprimer le projet</button><span class="grow"></span><button class="btn" data-x="close">Annuler</button><button class="btn primary" data-x="save">Enregistrer</button></div>
+    <p class="muted" style="margin:12px 0 0;font-size:12.5px">Supprimer le projet garde ses tâches, sans projet.</p>`);
+  $("#panel").onclick = e => {
+    const sw = e.target.closest("[data-col]");
+    if (sw){ color = sw.dataset.col; $("#panel").querySelectorAll("[data-col]").forEach(b => b.classList.toggle("on", b === sw)); return; }
+    const x = e.target.closest("[data-x]"); if (!x) return;
+    const a = x.dataset.x;
+    if (a === "close") closeSheet();
+    else if (a === "save"){ const name = $("#pn").value.trim(); if (!name) return; closeSheet(); putProject({ ...p, name, color }); }
+    else if (a === "del"){
+      if (x.dataset.armed){ closeSheet(); delProject(id); location.hash = "#projets"; }
+      else { x.dataset.armed = "1"; x.textContent = "Confirmer"; x.classList.add("solid"); }
+    }
+  };
+}
+
+/* ---------- Toast & bannière ---------- */
+let toastTimer;
+function toast(msg, undo){
+  const el = $("#toast");
+  el.innerHTML = `<span>${esc(msg)}</span>${undo ? `<button>Annuler</button>` : ""}`;
+  el.hidden = false;
+  if (undo) el.querySelector("button").onclick = () => { el.hidden = true; undo(); };
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.hidden = true, 4500);
+}
+function banner(msg){ const b = $("#banner"); if (!msg){ b.hidden = true; return; } b.textContent = msg; b.hidden = false; }
+
+/* ---------- Événements ---------- */
+document.addEventListener("submit", e => {
+  e.preventDefault();
+  if (e.target.id === "addTask"){
+    const title = $("#tTitle").value.trim(); if (!title) return;
+    const when = $("#tWhen").value;
+    formState.text = "";
+    addTask(title, $("#tProj").value, when, $("#tDate").value);
+    $("#tTitle").focus();
+  } else if (e.target.id === "addProj"){
+    const name = $("#pName").value.trim(); if (!name) return;
+    const used = projects().map(p => p.color);
+    const color = COLORS.find(c => !used.includes(c)) || COLORS[projects().length % COLORS.length];
+    putProject({ id: uid("p"), name, color, createdAt: Date.now() });
+  }
+});
+document.addEventListener("input", e => {
+  if (!formState) return;
+  if (e.target.id === "tTitle") formState.text = e.target.value;
+});
+document.addEventListener("change", e => {
+  if (!formState) return;
+  if (e.target.id === "tWhen"){ formState.when = e.target.value; $("#tDate").hidden = e.target.value !== "date"; }
+  if (e.target.id === "tProj") formState.project = e.target.value;
+  if (e.target.id === "tDate") formState.date = e.target.value;
+});
+document.addEventListener("click", e => {
+  const a = e.target.closest("[data-act]"); if (!a || a.closest("#panel")) return;
+  const act = a.dataset.act, li = a.closest("li.task"), id = li && li.dataset.id;
+  if (act === "toggle") toggle(id);
+  else if (act === "edit") editSheet(id);
+  else if (act === "resched") reschedSheet(id);
+  else if (act === "quick") reschedule(id, a.dataset.when);
+  else if (act === "editproj") projSheet(route().id);
+  else if (act === "settings") settingsSheet();
+  else if (act === "alltoday"){
+    const c = ctx();
+    tasks().filter(t => isOverdue(t, c)).forEach(t => putTask({ ...t, day: c.T, week: null, resched: (t.resched || 0) + 1 }));
+    toast("Tâches en retard déplacées à aujourd'hui");
+  }
+  else if (act === "addon"){
+    if (!formState) return;
+    formState.when = "date"; formState.date = a.dataset.day;
+    $("#tWhen").value = "date"; $("#tDate").value = a.dataset.day; $("#tDate").hidden = false;
+    $("#tTitle").focus(); window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  else if (act === "purge"){
+    if (!a.dataset.armed){ a.dataset.armed = "1"; a.textContent = "Confirmer la suppression"; a.classList.add("solid"); return; }
+    const lim = iso(addDays(parse(ctx().T), -30));
+    tasks().filter(t => t.done && (t.doneAt || "") < lim).forEach(t => delTask(t.id));
+  }
+});
+window.addEventListener("hashchange", () => { formState = null; window.scrollTo(0, 0); render(); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) render(); });
+let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => renderNav(route()), 150); });
+
+init();
+</script>
+</body>
+</html>

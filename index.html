@@ -352,6 +352,7 @@ async function push(){
         if (g.exists){ ghSha = g.sha; mergeRemote(g.data); render(); } else ghSha = null;
         continue;
       }
+      if (r.status === 403 || r.status === 404) throw new Error("ce jeton peut lire tes tâches mais pas les enregistrer : dans ⚙, colle le jeton qui a la permission Contents « Read and write »");
       throw ghError(r.status);
     }
     if (pending) setSync("err", "conflit d'enregistrement répété");

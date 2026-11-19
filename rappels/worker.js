@@ -78,12 +78,19 @@ function activeSubs(data) {
   return (data.subs || []).filter(s => s.endpoint && s.keys && !deleted[s.id]);
 }
 
+// Lit une variable sans tenir compte des majuscules (GITHUB_TOKEN, github_token…)
+function envGet(env, name) {
+  for (const k of Object.keys(env)) if (k.toLowerCase() === name.toLowerCase() && typeof env[k] === "string" && env[k].trim()) return env[k].trim();
+  return null;
+}
+
 async function loadData(env) {
-  if (!env.GITHUB_TOKEN) throw new Error("secret GITHUB_TOKEN manquant");
-  const owner = env.GITHUB_OWNER || DEFAULTS.owner, repo = env.GITHUB_REPO || DEFAULTS.repo, path = env.GITHUB_PATH || DEFAULTS.path;
+  const token = envGet(env, "GITHUB_TOKEN");
+  if (!token) throw new Error("secret GITHUB_TOKEN manquant (variables vues : " + Object.keys(env).join(", ") + ")");
+  const owner = envGet(env, "GITHUB_OWNER") || DEFAULTS.owner, repo = envGet(env, "GITHUB_REPO") || DEFAULTS.repo, path = envGet(env, "GITHUB_PATH") || DEFAULTS.path;
   const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
     headers: {
-      "Authorization": "Bearer " + env.GITHUB_TOKEN,
+      "Authorization": "Bearer " + token,
       "Accept": "application/vnd.github.raw+json",
       "X-GitHub-Api-Version": "2022-11-28",
       "User-Agent": "taches-rappels",

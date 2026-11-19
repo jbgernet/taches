@@ -34,6 +34,10 @@ export default {
         const r = await sendPush(env, subscription, { title: "Notifications activées ✓", body: "Tes rappels de tâches arriveront ici.", tag: "test" });
         return json({ ok: r.ok, status: r.status });
       }
+      if (url.pathname === "/run") {
+        // Lance la vérification des rappels tout de suite (diagnostic)
+        return json({ ok: true, ...(await runReminders(env)) });
+      }
       if (url.pathname === "/status") {
         const data = await loadData(env);
         const now = Date.now();
@@ -54,23 +58,31 @@ export default {
 
 /* ---------- Envoi des rappels ---------- */
 async function runReminders(env) {
+  const report = { heure_serveur: new Date().toISOString(), abonnements: 0, rappels_dus: [], envoyes: [] };
   const data = await loadData(env);
   const now = Date.now();
   const deleted = data.deleted || {};
   const subs = activeSubs(data);
-  if (!subs.length) return;
+  report.abonnements = subs.length;
+  const withRemind = (data.tasks || []).filter(t => t.remind && !t.done && !deleted[t.id]);
+  report.rappels_actifs = withRemind.map(t => ({ tache: t.title, rappel: new Date(t.remind).toISOString(), statut: t.remind > now ? "à venir" : (t.remind > now - WINDOW_MS ? "dû" : "trop ancien (> 6 h)") }));
+  if (!subs.length) return report;
   const projects = new Map((data.projects || []).map(p => [p.id, p]));
-  const due = (data.tasks || []).filter(t =>
-    t.remind && !t.done && !deleted[t.id] && t.remind <= now && t.remind > now - WINDOW_MS);
+  const due = withRemind.filter(t => t.remind <= now && t.remind > now - WINDOW_MS);
 
   for (const t of due) {
     const key = `sent:${t.id}:${t.remind}`;
-    if (await env.KV.get(key)) continue;
+    if (await env.KV.get(key)) { report.rappels_dus.push({ tache: t.title, deja_envoye: true }); continue; }
     const p = t.projectId ? projects.get(t.projectId) : null;
     const payload = { title: t.title, body: p ? `Rappel · ${p.name}` : "Rappel", tag: t.id, url: APP_URL };
-    await Promise.all(subs.map(s => sendPush(env, s, payload).catch(() => null)));
-    await env.KV.put(key, "1", { expirationTtl: 3 * 86400 });
+    const res = await Promise.all(subs.map(async s => {
+      try { const r = await sendPush(env, s, payload); return { appareil: s.label || "?", statut: r.status, detail: r.ok ? "ok" : (await r.text()).slice(0, 200) }; }
+      catch (e) { return { appareil: s.label || "?", erreur: String(e && e.message || e) }; }
+    }));
+    report.envoyes.push({ tache: t.title, resultats: res });
+    if (res.some(x => x.statut >= 200 && x.statut < 300)) await env.KV.put(key, "1", { expirationTtl: 3 * 86400 });
   }
+  return report;
 }
 
 function activeSubs(data) {

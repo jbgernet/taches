@@ -407,9 +407,9 @@ function settingsSheet(focusNotif){
   $("#panel").onclick = async e => {
     const x = e.target.closest("[data-x]"); if (!x) return;
     const a = x.dataset.x;
-    const nmsg = m => { const el = $("#nMsg"); if (el) el.textContent = m; };
+    const nmsg = m => { const el = $("#nMsg"); if (el){ el.textContent = m; el.style.color = /^✓/.test(m) ? "var(--accent)" : "var(--orange)"; el.scrollIntoView({ block: "nearest" }); } toast(m.length > 90 ? m.slice(0, 88) + "…" : m); };
     if (a === "close") closeSheet();
-    else if (a === "pushon") enablePush($("#sWorker").value, nmsg);
+    else if (a === "pushon"){ nmsg("Activation…"); enablePush($("#sWorker").value, nmsg).catch(err => nmsg("Échec : " + (err && err.message || err))); }
     else if (a === "pushoff") disablePush(nmsg);
     else if (a === "pushtest") testPush(nmsg);
     else if (a === "forget"){
@@ -513,7 +513,8 @@ async function enablePush(urlInput, msg){
       : "Ce navigateur ne gère pas les notifications push.");
     return;
   }
-  const url = (urlInput || "").trim().replace(/\/+$/, "");
+  let url = (urlInput || "").trim().replace(/\/+$/, "").replace(/\/status$/, "");
+  if (url && !/^https?:\/\//i.test(url)) url = "https://" + url;
   if (S.mode !== "gh"){ msg("Connecte d'abord ton repo GitHub (ci-dessus) : le service de rappels lit tes tâches là-bas."); return; }
   if (!/^https:\/\//.test(url)){ msg("Colle d'abord l'adresse du service de rappels (https://…workers.dev)."); return; }
   const perm = await Notification.requestPermission();
